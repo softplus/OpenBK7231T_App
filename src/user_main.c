@@ -29,6 +29,7 @@
 #include "littlefs/our_lfs.h"
 #endif
 
+#include "tuya_os_adapt_system.h"
 
 #include "driver/drv_ntp.h"
 
@@ -50,6 +51,8 @@ static int g_bootFailures = 0;
 
 static int g_saveCfgAfter = 0;
 static int g_startPingWatchDogAfter = 0;
+static int g_startHardwareWatchdog = 30; // start hardware watchdog after this many seconds
+#define WATCHDOG_REBOOT_TIMEOUT 30 // watchdog reboot timeout [seconds]
 
 // not really <time>, but rather a loop count, but it doesn't really matter much
 static int g_timeSinceLastPingReply = 0;
@@ -181,6 +184,20 @@ int Main_HasMQTTConnected(){
 void Main_OnEverySecond()
 {
 	const char *safe;
+
+	// start watchdog if ready
+	if (g_startHardwareWatchdog>0) {
+		g_startHardwareWatchdog--;
+		if (g_startHardwareWatchdog==1) {
+			ADDLOGF_INFO(" *** Hardware watchdog starts next cycle\n");
+		} else if (g_startHardwareWatchdog==0) {
+			ADDLOGF_INFO(" *** Hardware watchdog starts\n");
+			int err = tuya_os_adapt_watchdog_init_start(WATCHDOG_REBOOT_TIMEOUT); 
+			ADDLOGF_INFO(" --- result=%s\n", ((err==0)?"FAIL":"OK"));
+		}
+	} else {
+		tuya_os_adapt_watchdog_refresh(); // ping watchdog to keep running
+	}
 
 	// run_adc_test();
 	bMQTTconnected = MQTT_RunEverySecondUpdate();
