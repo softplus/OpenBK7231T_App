@@ -8,7 +8,6 @@
 // Commands register, execution API and cmd tokenizer
 #include "../cmnds/cmd_public.h"
 
-static char tmp[1024];
 int loglevel = 4; // default to info
 unsigned int logfeatures = (
     (1 << 0) |
@@ -86,6 +85,7 @@ void LOG_SetRawSocketCallback(int newFD) {
 
 void addLogAdv(int level, int feature, char *fmt, ...){
     va_list argList;
+    char tmp[1024];
     char *t = tmp;
     if (!((1<<feature) & logfeatures)){
         return;
@@ -104,8 +104,9 @@ void addLogAdv(int level, int feature, char *fmt, ...){
 		}
 	}
     va_start(argList, fmt);
-    vsprintf(t, fmt, argList);
+    vsnprintf(t, sizeof(tmp)-3-(t-tmp), fmt, argList);
     va_end(argList);
+    if (tmp[strlen(tmp)-1]=='\n') tmp[strlen(tmp)-1]='\0'; // drop trailing NL
 
     printf(tmp);
     printf("\r\n");
@@ -121,6 +122,7 @@ static SemaphoreHandle_t g_mutex = 0;
 void addLogAdv(int level, int feature, char *fmt, ...){
     va_list argList;
     BaseType_t taken;
+    char tmp[1024];
     char *t = tmp;
     if (!((1<<feature) & logfeatures)){
         return;
@@ -148,8 +150,9 @@ void addLogAdv(int level, int feature, char *fmt, ...){
 			}
 		}
 		va_start(argList, fmt);
-		vsprintf(t, fmt, argList);
+        vsnprintf(t, sizeof(tmp)-3-(t-tmp), fmt, argList);
 		va_end(argList);
+        if (tmp[strlen(tmp)-1]=='\n') tmp[strlen(tmp)-1]='\0'; // drop trailing NL
 
 		bk_printf(tmp);
 		bk_printf("\r\n");
@@ -175,10 +178,9 @@ static void log_serial_thread( beken_thread_arg_t arg );
 static void startSerialLog();
 static void startLogServer();
 
-#define LOGSIZE 4096
+//#define LOGSIZE 4096
+#define LOGSIZE 8192
 #define LOGPORT 9000
-
-int logTcpPort = LOGPORT;
 
 static struct tag_logMemory {
     char log[LOGSIZE];
@@ -193,7 +195,7 @@ static struct tag_logMemory {
 static int initialised = 0;
 
 static void initLog( void ) {
-    bk_printf("Entering init log...\r\n");
+    bk_printf("Entering init log...\n");
     logMemory.head = logMemory.tailserial = logMemory.tailtcp = logMemory.tailhttp = 0;
     logMemory.mutex = xSemaphoreCreateMutex( );
     initialised = 1;
@@ -215,6 +217,7 @@ static void initLog( void ) {
 // adds a log to the log memory
 // if head collides with either tail, move the tails on.
 void addLogAdv(int level, int feature, char *fmt, ...){
+    char tmp[1024];
     char *t = tmp;
     if (!((1<<feature) & logfeatures)){
         return;
@@ -242,8 +245,10 @@ void addLogAdv(int level, int feature, char *fmt, ...){
 	}
 
     va_start(argList, fmt);
-    vsprintf(t, fmt, argList);
+    vsnprintf(t, sizeof(tmp)-3-(t-tmp), fmt, argList);
     va_end(argList);
+    if (tmp[strlen(tmp)-1]=='\n') tmp[strlen(tmp)-1]='\0'; // drop trailing /n
+    if (tmp[strlen(tmp)-1]=='\r') tmp[strlen(tmp)-1]='\0'; // drop trailing /r
 
     int len = strlen(tmp);
     tmp[len++] = '\r';
@@ -384,7 +389,7 @@ void log_server_thread( beken_thread_arg_t arg )
 
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;/* Accept conenction request on all network interface */
-    server_addr.sin_port = htons( logTcpPort );/* Server listen on port: 20000 */
+    server_addr.sin_port = htons(LOGPORT);/* Server listen on port: 9000 */
     err = bind( tcp_listen_fd, (struct sockaddr *) &server_addr, sizeof(server_addr) );
 
     err = listen( tcp_listen_fd, 0 );
@@ -474,6 +479,8 @@ static int http_getlograw(http_request_t *request){
         buf[len] = '\0';
         if (len){
             poststr(request, buf);
+            //char justspace[10]; sprintf(justspace, " ");
+            //if (buf[len-1]=='\n') poststr(request, justspace); // append space to fix web app
         }
     } while (len);
     poststr(request, NULL);
