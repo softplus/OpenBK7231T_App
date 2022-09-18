@@ -31,6 +31,9 @@ uint32_t flash_read(uint32_t flash, uint32_t addr,void *buf, uint32_t size);
 extern UINT32 flash_read(char *user_buf, UINT32 count, UINT32 address);
 #endif
 
+#include "BkDriverFlash.h"
+#include "BkDriverUart.h"
+
 #define MAX_JSON_VALUE_LENGTH   128
 
 
@@ -706,9 +709,16 @@ static int http_rest_get_info(http_request_t *request){
     hprintf128(request, "\"mqtttopic\":\"%s\",", CFG_GetMQTTClientId());
     hprintf128(request, "\"chipset\":\"%s\",", PLATFORM_MCU_NAME);
     hprintf128(request, "\"webapp\":\"%s\",", CFG_GetWebappRoot());
-    hprintf128(request, "\"supportsClientDeviceDB\":true}");
+
+    bk_logic_partition_t *pt = bk_flash_get_info(BK_PARTITION_NET_PARAM);
+    hprintf128(request, "\"flash_config_addr\":\"0x%x\",", pt->partition_start_addr);
+    pt = bk_flash_get_info(START_ADR_OF_BK_PARTITION_OTA);
+    hprintf128(request, "\"flash_ota_addr\":\"0x%x\",", pt->partition_start_addr);
+
+    hprintf128(request, "\"supportsClientDeviceDB\":true}\n");
 
     poststr(request, NULL);
+
     return 0;
 }
 
