@@ -40,8 +40,8 @@ extern char *logfeaturenames[];
 extern int direct_serial_log;
 
 // set to 1 to use only direct serial logging at startup - eg for boot issues
-#define DEFAULT_DIRECT_SERIAL_LOG 0
-//#define DEFAULT_DIRECT_SERIAL_LOG 1
+//#define DEFAULT_DIRECT_SERIAL_LOG 0
+#define DEFAULT_DIRECT_SERIAL_LOG 1
 
 typedef enum {
     LOG_NONE = 0,
