@@ -236,7 +236,7 @@ void HAL_ConnectToWiFi(const char *oob_ssid,const char *connect_key)
 {
 	g_bOpenAccessPointMode = 0;
 
-#if 1
+#if FALSE
 	network_InitTypeDef_adv_st	wNetConfigAdv;
 
 	os_memset( &wNetConfigAdv, 0x0, sizeof(network_InitTypeDef_adv_st) );
