@@ -877,6 +877,7 @@ static int http_rest_post_flash(http_request_t *request, int startaddr){
         total += writelen;
         towrite -= writelen;
         if (towrite > 0){
+            taskYIELD(); // give rtos room to reduce interruption elsewhere
             writebuf = request->received;
             writelen = recv(request->fd, writebuf, request->receivedLenmax, 0);
             if (writelen < 0){
