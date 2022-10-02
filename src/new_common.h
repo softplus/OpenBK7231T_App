@@ -253,6 +253,7 @@ int strcpy_safe(char *tg, const char *src, int tgMaxLen);
 int strcpy_safe_checkForChanges(char *tg, const char *src, int tgMaxLen);
 void urldecode2_safe(char *dst, const char *srcin, int maxDstLen);
 int strIsInteger(const char *s);
+int bin2hexstr(const char *src, int srcLen, const char *dst, int maxDstLen, __uint32_t offset);
 
 // user_main.c
 int Time_getUpTimeSeconds();

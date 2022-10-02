@@ -141,3 +141,39 @@ void urldecode2_safe(char *dst, const char *srcin, int maxDstLen)
         *dst++ = '\0';
 }
 
+// from https://github.com/softplus/random-c
+//
+// converts src data to hex-strings for output, checks length: 0=fail, 1=ok
+int bin2hexstr(const char *src, int srcLen, const char *dst, int maxDstLen, __uint32_t offset) {
+	// check length: 8xOffset, 2 spaces, 16 hex digits w/space, 1 space, 1 space, 16 chars, /n
+    // -> needs 78 characters per line (16 bytes)
+    int line_size = (8 + 2 + 16*3 + 1 + 1 + 16 + 2);
+    int row_count = ((srcLen-1)/16)+1;
+    if (maxDstLen < row_count * line_size + 1) {
+		return 0;
+	}
+	char *hexes, *chars, *out;
+	hexes=(char *)src; chars=(char *)src; out=(char *)dst; 
+    // note *out is not null-terminated until we return
+	for (int i=0; i<row_count*16; i++) {
+		if (i%16==0) {
+			out += snprintf(out, maxDstLen-(1+out-dst), "%08X", offset + i);
+		}
+        if (i%8==0) *(out++)=' ';
+		if (i<srcLen) { out+=snprintf(out, maxDstLen-(1+out-dst), "%02x ", (__uint8_t)*hexes++);
+			} else { out+=snprintf(out, maxDstLen-(1+out-dst), "-- ");}
+		if ((i+1)%16==0) {
+			*(out++)=' '; 
+			for (int j=0; j<16; j++) {
+				if (j%8==0) *out++=' ';
+				if ((chars-src)<srcLen) {
+					if (*chars>=' ' && *chars<127) *out++=*chars; else *out++='.';
+					chars++;
+				} else *out++='-';
+			}
+			*out++='\n';
+		}
+	}
+	*out='\0';
+	return 1;
+}
