@@ -8,3 +8,4 @@ output/**
 **/*.d
 /custom.mk
 /.vs
+.vscode/**
