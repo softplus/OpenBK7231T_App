@@ -29,13 +29,14 @@ int init_ota(unsigned int startaddr){
 	  flash_protection_op(FLASH_XTX_16M_SR_WRITE_ENABLE, FLASH_PROTECT_NONE);
     if (startaddr > 0xff000){
         if (sector){
-            addLogAdv(LOG_INFO, LOG_FEATURE_OTA,"aborting OTS, sector already non-null\n");
+            addLogAdv(LOG_INFO, LOG_FEATURE_OTA,"aborting OTA, sector already non-null\n");
             return 0;
         }
         sector = os_malloc(SECTOR_SIZE);
         sectorlen = 0;
         addr = startaddr;
         addLogAdv(LOG_INFO, LOG_FEATURE_OTA,"init OTA, startaddr 0x%x\n", startaddr);
+        g_ota_pause_until = 30;
         return 1;
     }
     addLogAdv(LOG_INFO, LOG_FEATURE_OTA,"aborting OTA, startaddr 0x%x < 0xff000\n", startaddr);
@@ -43,9 +44,9 @@ int init_ota(unsigned int startaddr){
 }
 
 void close_ota(){
-    addLogAdv(LOG_INFO, LOG_FEATURE_OTA,"\r\n");
+    addLogAdv(LOG_INFO, LOG_FEATURE_OTA,"close_ota()");
     if (sectorlen){
-        addLogAdv(LOG_INFO, LOG_FEATURE_OTA,"close OTA, additional 0x%x FF added \n", SECTOR_SIZE - sectorlen);
+        addLogAdv(LOG_INFO, LOG_FEATURE_OTA,"close OTA, additional 0x%x FF added", SECTOR_SIZE - sectorlen);
         memset(sector+sectorlen, 0xff, SECTOR_SIZE - sectorlen);
         sectorlen = SECTOR_SIZE;
         store_sector(addr, sector);
@@ -53,6 +54,7 @@ void close_ota(){
         sectorlen = 0;
     }
     addLogAdv(LOG_INFO, LOG_FEATURE_OTA,"close OTA, addr 0x%x\n", addr);
+    g_ota_pause_until = 2; // wait another sec ...
 
     os_free(sector);
     sector = (void *)0;
@@ -84,14 +86,17 @@ void add_otadata(unsigned char *data, int len){
 }
 
 static void store_sector(unsigned int addr, unsigned char *data){
+    GLOBAL_INT_DECLARATION();
     if (!(addr % 0x4000)){
       addLogAdv(LOG_INFO, LOG_FEATURE_OTA,"%x", addr);
     }
     //addLogAdv(LOG_INFO, LOG_FEATURE_OTA,"writing OTA, addr 0x%x\n", addr);
+    GLOBAL_INT_DISABLE();
     flash_ctrl(CMD_FLASH_WRITE_ENABLE, (void *)0);
     flash_ctrl(CMD_FLASH_ERASE_SECTOR, &addr);
     flash_ctrl(CMD_FLASH_WRITE_ENABLE, (void *)0);
     flash_write((char *)data , SECTOR_SIZE, addr);
+    GLOBAL_INT_RESTORE();
 }
 
 

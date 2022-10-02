@@ -151,6 +151,7 @@ static void tcp_server_thread( beken_thread_arg_t arg )
 
         if ( FD_ISSET( tcp_listen_fd, &readfds ) )
         {
+          if (g_ota_pause_until) continue; // skip socket if in OTA mode
             client_fd = accept( tcp_listen_fd, (struct sockaddr *) &client_addr, &sockaddr_t_size );
             if ( client_fd >= 0 )
             {

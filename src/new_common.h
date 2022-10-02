@@ -266,6 +266,7 @@ void Main_OnEverySecond();
 int Main_HasMQTTConnected();
 int Main_GetLastRebootBootFailures();
 void Main_OnPingCheckerReply(int ms);
+int g_ota_pause_until;
 
 // new_ping.c
 void Main_SetupPingWatchDog(const char *target/*, int delayBetweenPings_Seconds*/);

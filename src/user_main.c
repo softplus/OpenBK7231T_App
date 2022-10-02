@@ -56,6 +56,8 @@ static int g_timeSinceLastPingReply = 0;
 // was it ran?
 static int g_bPingWatchDogStarted = 0;
 
+int g_ota_pause_until = 0;
+
 #define LOG_FEATURE LOG_FEATURE_MAIN
 
 
@@ -181,26 +183,35 @@ int Main_HasMQTTConnected(){
 void Main_OnEverySecond()
 {
 	const char *safe;
-
+	if (g_ota_pause_until>0) {
+		g_ota_pause_until--; 
+		if (g_ota_pause_until==0) {
+			ADDLOGF_INFO("[Main] OTA pause complete");
+		} else {
+			if (((g_ota_pause_until+1) % 10)==0)
+				ADDLOGF_INFO("[Main] OTA pause for %i seconds", g_ota_pause_until);
+		}
+	}
 	// run_adc_test();
-	bMQTTconnected = MQTT_RunEverySecondUpdate();
-	RepeatingEvents_OnEverySecond();
+	if (!g_ota_pause_until && g_bHasWiFiConnected) bMQTTconnected = MQTT_RunEverySecondUpdate();
+	if (!g_ota_pause_until) RepeatingEvents_OnEverySecond();
 #ifndef OBK_DISABLE_ALL_DRIVERS
-	DRV_OnEverySecond();
+	if (!g_ota_pause_until) DRV_OnEverySecond();
 #endif
 	// some users say that despite our simple reconnect mechanism
 	// there are some rare cases when devices stuck outside network
 	// That is why we can also reconnect them by basing on ping
-	if(g_timeSinceLastPingReply != -1 && g_secondsElapsed > 60) {
-		g_timeSinceLastPingReply++;
-		if(g_timeSinceLastPingReply == CFG_GetPingDisconnectedSecondsToRestart()) {
-			ADDLOGF_INFO("[Ping watchdog] No ping replies within %i seconds. Will try to reconnect.\n",g_timeSinceLastPingReply);
-			g_bHasWiFiConnected = 0;
-			g_connectToWiFi = 10;
+	if (!g_ota_pause_until) {
+		if(g_timeSinceLastPingReply != -1 && g_secondsElapsed > 60) {
+			g_timeSinceLastPingReply++;
+			if(g_timeSinceLastPingReply == CFG_GetPingDisconnectedSecondsToRestart()) {
+				ADDLOGF_INFO("[Ping watchdog] No ping replies within %i seconds. Will try to reconnect.\n",g_timeSinceLastPingReply);
+				g_bHasWiFiConnected = 0;
+				g_connectToWiFi = 10;
+			}
 		}
 	}
-
-	if(bSafeMode == 0) {
+	if(!bSafeMode && !g_ota_pause_until) {
 		int i;
 
 		for(i = 0; i < PLATFORM_GPIO_MAX; i++) {
@@ -215,7 +226,7 @@ void Main_OnEverySecond()
 		}
 	}
 
-	if(scheduledDelay > 0) {
+	if(!g_ota_pause_until && scheduledDelay > 0) {
 		scheduledDelay--;
 		if(scheduledDelay<=0){
 			scheduledDelay = -1;
@@ -244,12 +255,12 @@ void Main_OnEverySecond()
 	}
 
 	// print network info
-	if (!(g_secondsElapsed % 10)){
+	if (!g_ota_pause_until && !(g_secondsElapsed % 10)){
 		HAL_PrintNetworkInfo();
 	}
 
 	// when we hit 30s, mark as boot complete.
-	if(g_bBootMarkedOK==false) {
+	if(!g_ota_pause_until && g_bBootMarkedOK==false) {
 		int bootCompleteSeconds = CFG_GetBootOkSeconds();
 		if (g_secondsElapsed > bootCompleteSeconds){
 			ADDLOGF_INFO("Boot complete time reached (%i seconds)\n",bootCompleteSeconds);
@@ -259,14 +270,15 @@ void Main_OnEverySecond()
 		}
 	}
 
-	if (g_openAP){
+	if (!g_ota_pause_until && g_openAP){
 		g_openAP--;
 		if (0 == g_openAP){
 			HAL_SetupWiFiOpenAccessPoint(CFG_GetDeviceName());
 			g_bOpenAccessPointMode = 1;
 		}
 	}
-	if(g_startPingWatchDogAfter) {
+
+	if(!g_ota_pause_until && g_startPingWatchDogAfter) {
 		g_startPingWatchDogAfter--;
 		if(0==g_startPingWatchDogAfter) {
 			const char *pingTargetServer;
@@ -292,7 +304,7 @@ void Main_OnEverySecond()
 			}
 		}
 	}
-	if(g_connectToWiFi){
+	if(!g_ota_pause_until && g_connectToWiFi){
 		g_connectToWiFi --;
 		if(0 == g_connectToWiFi && g_bHasWiFiConnected == 0) {
 			const char *wifi_ssid, *wifi_pass;
@@ -313,13 +325,13 @@ void Main_OnEverySecond()
 	}
 
 	// config save moved here because of stack size problems
-	if (g_saveCfgAfter){
+	if (!g_ota_pause_until && g_saveCfgAfter){
 		g_saveCfgAfter--;
 		if (!g_saveCfgAfter){
 			CFG_Save_IfThereArePendingChanges();
 		}
 	}
-	if (g_reset){
+	if (!g_ota_pause_until && g_reset){
 		g_reset--;
 		if (!g_reset){
 			// ensure any config changes are saved before reboot.
