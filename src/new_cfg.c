@@ -462,7 +462,7 @@ void CFG_SetNTPServer(const char *s) {
 
 void CFG_InitAndLoad() {
 	byte chkSum;
-
+	HAL_Configuration_HexDump();
 	HAL_Configuration_ReadConfigMemory(&g_cfg,sizeof(g_cfg));
 	chkSum = CFG_CalcChecksum(&g_cfg);
 	if(g_cfg.ident0 != CFG_IDENT_0 || g_cfg.ident1 != CFG_IDENT_1 || g_cfg.ident2 != CFG_IDENT_2
