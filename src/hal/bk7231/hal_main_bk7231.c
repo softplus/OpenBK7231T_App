@@ -6,6 +6,9 @@
 #include "../../beken378/app/config/param_config.h"
 
 
+#include "drv_model_pub.h"
+#include "wdt_pub.h"
+
 // main timer tick every 1s
 beken_timer_t g_main_timer_1s;
 
@@ -49,3 +52,42 @@ void Free(void* ptr)
 #endif
 
 
+// copied from platforms/bk7231n/tuya_os_adapter/src/system/tuya_os_adapt_system.c
+// start the hardware watchdog with 'timeval' seconds timeout (max 60s)
+unsigned int watchdog_init_start(const unsigned int timeval)
+{
+    unsigned int ret;
+    //init 
+    int cyc_cnt = timeval * 1000;
+    
+    if(cyc_cnt > 0xFFFF) { /* 60s */
+        cyc_cnt = 0xFFFF;
+    }
+    
+    //init wdt
+    ret = sddev_control(WDT_DEV_NAME, WCMD_SET_PERIOD, &cyc_cnt);
+    
+    // start wdt timer
+    ret |= sddev_control(WDT_DEV_NAME, WCMD_POWER_UP, NULL);
+
+    if(ret != 0) {
+        ADDLOGF_ERROR("watchdog_init_start(): watch dog set error!\r\n");
+        return 0;
+    }
+    
+    return timeval;
+}
+
+// ping the watchdog to let it know we're ok
+void watchdog_refresh(void)
+{
+    if(sddev_control(WDT_DEV_NAME, WCMD_RELOAD_PERIOD, NULL) != 0) {
+        ADDLOGF_ERROR("watchdog_refresh(): refresh watchdog err!\r\n");
+    }
+}
+
+// stop the watchdog
+void watchdog_stop(void)
+{
+    sddev_control(WDT_DEV_NAME, WCMD_POWER_DOWN, NULL);
+}

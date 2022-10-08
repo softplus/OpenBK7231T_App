@@ -301,3 +301,16 @@ int LWIP_GetActiveSockets();
 // linear mapping function --> https://www.arduino.cc/reference/en/language/functions/math/map/
 
 #define MAP(x, in_min, in_max, out_min, out_max) (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+
+// Watchdog functions called in user_main.c, implemented in hal_main_bk7231.c
+#if defined(PLATFORM_BK7231N)
+// Hardware watchdog: reboots device if everything crashes.
+// eg, if OTA freezes, it'll wait this long and then restart.
+// set to 0 to disable
+// only tested on BK7231N/BK7231T
+unsigned int watchdog_init_start(const unsigned int timeval);
+void watchdog_refresh(void);
+void watchdog_stop(void);
+#define WATCHDOG_INIT_AFTER_RUNNING 35 // wait this long before starting (wait until safe boot)
+#define WATCHDOG_REBOOT_AFTER_CRASH 30 // watchdog reboot timeout [seconds]
+#endif
