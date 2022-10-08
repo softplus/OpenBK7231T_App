@@ -371,7 +371,6 @@ void Main_OnEverySecond()
 		err = watchdog_init_start(WATCHDOG_REBOOT_AFTER_CRASH); 
 		ADDLOGF_INFO("tuya_os_adapt_watchdog_init_start() result=%s\n", ((err==0)?"FAIL":"OK"));
 	} else if (g_secondsElapsed > WATCHDOG_INIT_AFTER_RUNNING) {
-		ADDLOGF_INFO("Watchdog ping");
 		// to test, add a comment for the next line and watch the logs for a reboot
 		watchdog_refresh(); // ping watchdog to keep running
 	}

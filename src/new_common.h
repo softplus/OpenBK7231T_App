@@ -303,7 +303,7 @@ int LWIP_GetActiveSockets();
 #define MAP(x, in_min, in_max, out_min, out_max) (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 
 // Watchdog functions called in user_main.c, implemented in hal_main_bk7231.c
-#if defined(PLATFORM_BK7231N)
+#if defined(PLATFORM_BK7231N) || defined(PLATFORM_BK7231T)
 // Hardware watchdog: reboots device if everything crashes.
 // eg, if OTA freezes, it'll wait this long and then restart.
 // set to 0 to disable
