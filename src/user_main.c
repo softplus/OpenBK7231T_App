@@ -362,6 +362,19 @@ void Main_OnEverySecond()
 	}
 
 
+	/* task manager output */
+	/* requires changes in Firmware:
+	** 
+	** in:
+	** platforms/bk7231n/bk7231n_os/beken378/os/include/FreeRTOSConfig.h
+	** 
+	** #define INCLUDE_uxTaskGetStackHighWaterMark       1
+	** #define configGENERATE_RUN_TIME_STATS             1
+	** #define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS()  ( 1 )
+	** #define portGET_RUN_TIME_COUNTER_VALUE()	      fclk_get_tick()
+	**
+	*/
+
 	if ((loglevel>=5) && (g_secondsElapsed % 15==0)) {
 		char buf[100];
 		TaskStatus_t *pxTaskStatusArray;
