@@ -362,6 +362,74 @@ void Main_OnEverySecond()
 	}
 
 
+	if ((loglevel>=5) && (g_secondsElapsed % 15==0)) {
+		char buf[100];
+		TaskStatus_t *pxTaskStatusArray;
+		volatile UBaseType_t uxArraySize, x;
+		unsigned long ulTotalRunTime, ulStatsAsPercentage;
+
+#ifdef INCLUDE_uxTaskGetStackHighWaterMark
+		unsigned long r = uxTaskGetStackHighWaterMark(NULL);
+		ADDLOGF_EXTRADEBUG("Task stack high water mark: %ld bytes", r);
+#endif
+
+		int i = (int)bk_misc_get_start_type();
+		ADDLOGF_EXTRADEBUG("Restart reason: %d", i); // potentially map
+
+		// From https://www.freertos.org/uxTaskGetSystemState.html
+		/* Take a snapshot of the number of tasks in case it changes while this
+		function is executing. */
+		uxArraySize = uxTaskGetNumberOfTasks();
+
+		/* Allocate a TaskStatus_t structure for each task.  An array could be
+		allocated statically at compile time. */
+		pxTaskStatusArray = pvPortMalloc( uxArraySize * sizeof( TaskStatus_t ) );
+
+		if( pxTaskStatusArray != NULL ) {
+			/* Generate raw status information about each task. */
+			uxArraySize = uxTaskGetSystemState( pxTaskStatusArray,
+										uxArraySize,
+										&ulTotalRunTime );
+
+			/* For percentage calculations. */
+			ulTotalRunTime /= 100UL;
+
+			if (ulTotalRunTime==0) ulTotalRunTime=100UL; // in case we have no runtimecounter
+
+			/* Avoid divide by zero errors. */
+			if( ulTotalRunTime > 0 ) {
+				/* For each populated position in the pxTaskStatusArray array,
+				format the raw data as human readable ASCII data. */
+				for( x = 0; x < uxArraySize; x++ ) {
+
+					/* What percentage of the total run time has the task used?
+					This will always be rounded down to the nearest integer.
+					ulTotalRunTimeDiv100 has already been divided by 100. */
+					ulStatsAsPercentage =
+						pxTaskStatusArray[ x ].ulRunTimeCounter / ulTotalRunTime;
+
+					ADDLOGF_EXTRADEBUG( 
+						"%15s\t\tRunTimeCounter=%lu\t%lu%%\t\tStackHigh=%i"
+						"\t\tState=%i\t\tCurPriority=%lu\n",
+						pxTaskStatusArray[x].pcTaskName,
+						pxTaskStatusArray[x].ulRunTimeCounter,
+						ulStatsAsPercentage,
+						pxTaskStatusArray[x].usStackHighWaterMark,
+						pxTaskStatusArray[x].eCurrentState,
+						pxTaskStatusArray[x].uxCurrentPriority
+						);
+				}
+			} else {
+				//ADDLOGF_EXTRADEBUG("No task list: ulTotalRunTime=0");
+			}
+
+			/* The array is no longer needed, free the memory it consumes. */
+			vPortFree( pxTaskStatusArray );
+		}	else {
+			ADDLOGF_EXTRADEBUG("Not enough memory for task list: %ld bytes", 
+				uxArraySize * sizeof( TaskStatus_t ));
+		}
+	}
 }
 
 void app_on_generic_dbl_click(int btnIndex)
